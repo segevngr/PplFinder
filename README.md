@@ -44,6 +44,16 @@ Each user displays a heart icon while hovered, you need to implement the followi
    4.2. The Favorite Page should display all of the Favorited users.\
    4.3. Clicking on a heart icon inside the favorite page should unfavorite the user, and remove it from the page.
 
+### Task 3 - Infinity Scroll
+
+Implement an Infinity Scroll functionality, which would fetch additional users and add them to the list once scrolling all the way down.
+
+### Bonus - Your Personal Touch
+
+- This is your chance to get creative. Add a new, **cool and innovative** feature to the app.
+- Feel free to delete, add, and refactor components as you see fit.
+  **Make sure** that the previous tasks still work.
+
 ## Tips / Notes
 
 - All the code you'll change / add will be in the `/src` folder.
