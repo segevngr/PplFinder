@@ -11,6 +11,7 @@ const UserList = ({ users, isLoading }) => {
   const [checkedCountries, setCheckedCountries] = useState(
     {Brazil: false, Australia: false, Canada: false, Germany: false, France: false});
   const [filteredUsers, setFilteredUsers] = useState([]);
+  const [favorites, setFavorites] = useState([]);
 
   useEffect(() => {
     setFilteredUsers(users);
@@ -20,7 +21,11 @@ const UserList = ({ users, isLoading }) => {
     filterUsers();
   }, [checkedCountries]);
 
-  const filterUsers = () => {
+  useEffect(() => {
+    loadFavorites();
+  }, []);
+
+    const filterUsers = () => {
     let checkedCountriesSet = new Set();
     let isChecked = false
     for(let country in checkedCountries) {
@@ -39,7 +44,7 @@ const UserList = ({ users, isLoading }) => {
 
   const toggleCountry = (country) => {
     const countryStatus = checkedCountries[country];
-    setCheckedCountries(oldState=> ({ ...oldState, [country]: !countryStatus }));
+    setCheckedCountries(prev => ({ ...prev, [country]: !countryStatus }));
   }
 
   const handleMouseEnter = (index) => {
@@ -50,7 +55,43 @@ const UserList = ({ users, isLoading }) => {
     setHoveredUserId();
   };
 
-  return (
+  const handleClick = (uuid) => {
+    const idx = isFavorite(uuid);
+    if(idx < 0){
+      addToFavorites(uuid);
+    }
+    else {
+      removeFromFavorites(uuid, idx);
+    }
+  };
+
+  const addToFavorites = (uuid) => {
+    const newFavorites = favorites.slice();
+    newFavorites.push(uuid);
+    setFavorites(newFavorites);
+    localStorage.setItem('favorites', JSON.stringify(newFavorites));
+  };
+
+  const removeFromFavorites = (uuid, idx) => {
+    const newFavorites = [...favorites.slice(0, idx), ...favorites.slice(idx + 1)];
+    setFavorites(newFavorites)
+    localStorage.setItem('favorites', JSON.stringify(newFavorites));
+  }
+
+  const loadFavorites = () => {
+    const currFavorites = JSON.parse(localStorage.getItem('favorites')) || [];
+    setFavorites(currFavorites);
+  }
+
+  const isFavorite = (uuid) => {
+    for(let i=0; i<favorites.length; i++) {
+      if(favorites[i] === uuid)
+        return i;
+    }
+    return -1;
+  }
+
+    return (
     <S.UserList>
       <S.Filters>
         <CheckBox value="BR" label="Brazil" onChange={toggleCountry} isChecked={checkedCountries.Brazil}/>
@@ -66,6 +107,7 @@ const UserList = ({ users, isLoading }) => {
               key={index}
               onMouseEnter={() => handleMouseEnter(index)}
               onMouseLeave={handleMouseLeave}
+              onClick={() => handleClick(user.login.uuid)}
             >
               <S.UserPicture src={user?.picture.large} alt="" />
               <S.UserInfo>
@@ -80,7 +122,7 @@ const UserList = ({ users, isLoading }) => {
                   {user?.location.city} {user?.location.country}
                 </Text>
               </S.UserInfo>
-              <S.IconButtonWrapper isVisible={index === hoveredUserId}>
+              <S.IconButtonWrapper isVisible={index === hoveredUserId || isFavorite(user.login.uuid) >= 0}>
                 <IconButton>
                   <FavoriteIcon color="error" />
                 </IconButton>
