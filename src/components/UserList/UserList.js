@@ -8,8 +8,7 @@ import * as S from "./style";
 
 const UserList = ({ users, isLoading }) => {
   const [hoveredUserId, setHoveredUserId] = useState();
-  const [checkedCountries, setCheckedCountries] = useState(
-    {Brazil: false, Australia: false, Canada: false, Germany: false, France: false});
+  const [checkedCountries, setCheckedCountries] = useState(new Set());
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [favorites, setFavorites] = useState([]);
 
@@ -25,26 +24,23 @@ const UserList = ({ users, isLoading }) => {
     loadFavorites();
   }, []);
 
-    const filterUsers = () => {
-    let checkedCountriesSet = new Set();
-    let isChecked = false
-    for(let country in checkedCountries) {
-      if(checkedCountries[country]) {
-        checkedCountriesSet.add(country);
-        isChecked = true;
-      }
+  const filterUsers = () => {
+    if(!checkedCountries.size){
+      setFilteredUsers(users)
     }
-    if(!isChecked) {
-      setFilteredUsers(users);
-      return;
+    else {
+      const newUsersList = users.filter(user => checkedCountries.has(user.location.country))
+      setFilteredUsers(newUsersList);
     }
-    const newUsersList = users.filter(user => checkedCountriesSet.has(user.location.country))
-    setFilteredUsers(newUsersList);
   }
 
   const toggleCountry = (country) => {
-    const countryStatus = checkedCountries[country];
-    setCheckedCountries(prev => ({ ...prev, [country]: !countryStatus }));
+    if(checkedCountries.has(country)){
+      setCheckedCountries(prev => new Set([...prev].filter(x => x !== country)))
+    }
+    else{
+      setCheckedCountries(prev => new Set(prev.add(country)))
+    }
   }
 
   const handleMouseEnter = (index) => {
