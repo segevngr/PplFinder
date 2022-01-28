@@ -6,7 +6,7 @@ import IconButton from "@material-ui/core/IconButton";
 import FavoriteIcon from "@material-ui/icons/Favorite";
 import * as S from "./style";
 
-const UserList = ({ users, isLoading }) => {
+const UserList = ({ users, isLoading, page, updateFavoritesList}) => {
   const [hoveredUserId, setHoveredUserId] = useState();
   const [checkedCountries, setCheckedCountries] = useState(new Set());
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -24,6 +24,28 @@ const UserList = ({ users, isLoading }) => {
     loadFavorites();
   }, []);
 
+  const handleMouseEnter = (index) => {
+    setHoveredUserId(index);
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredUserId();
+  };
+
+  const handleClick = (user) => {
+    if(page === "favorites") {
+      updateFavoritesList(user.login.uuid);
+    }
+    const idx = getFavoriteIdx(user.login.uuid);
+    if(idx < 0){
+      addToFavorites(user);
+    }
+    else {
+      removeFromFavorites(user.login.uuid, idx);
+    }
+  };
+
+  // Filter methods:
   const filterUsers = () => {
     if(!checkedCountries.size){
       setFilteredUsers(users)
@@ -43,35 +65,20 @@ const UserList = ({ users, isLoading }) => {
     }
   }
 
-  const handleMouseEnter = (index) => {
-    setHoveredUserId(index);
-  };
-
-  const handleMouseLeave = () => {
-    setHoveredUserId();
-  };
-
-  const handleClick = (uuid) => {
-    const idx = isFavorite(uuid);
-    if(idx < 0){
-      addToFavorites(uuid);
-    }
-    else {
-      removeFromFavorites(uuid, idx);
-    }
-  };
-
-  const addToFavorites = (uuid) => {
+  // Favorites methods:
+  const addToFavorites = (user) => {
     const newFavorites = favorites.slice();
-    newFavorites.push(uuid);
+    newFavorites.push(user.login.uuid);
     setFavorites(newFavorites);
     localStorage.setItem('favorites', JSON.stringify(newFavorites));
+    localStorage.setItem(user.login.uuid, JSON.stringify(user));
   };
 
   const removeFromFavorites = (uuid, idx) => {
     const newFavorites = [...favorites.slice(0, idx), ...favorites.slice(idx + 1)];
     setFavorites(newFavorites)
     localStorage.setItem('favorites', JSON.stringify(newFavorites));
+    localStorage.removeItem(uuid);
   }
 
   const loadFavorites = () => {
@@ -79,7 +86,7 @@ const UserList = ({ users, isLoading }) => {
     setFavorites(currFavorites);
   }
 
-  const isFavorite = (uuid) => {
+  const getFavoriteIdx = (uuid) => {
     for(let i=0; i<favorites.length; i++) {
       if(favorites[i] === uuid)
         return i;
@@ -103,7 +110,7 @@ const UserList = ({ users, isLoading }) => {
               key={index}
               onMouseEnter={() => handleMouseEnter(index)}
               onMouseLeave={handleMouseLeave}
-              onClick={() => handleClick(user.login.uuid)}
+              onClick={() => handleClick(user)}
             >
               <S.UserPicture src={user?.picture.large} alt="" />
               <S.UserInfo>
@@ -118,7 +125,7 @@ const UserList = ({ users, isLoading }) => {
                   {user?.location.city} {user?.location.country}
                 </Text>
               </S.UserInfo>
-              <S.IconButtonWrapper isVisible={index === hoveredUserId || isFavorite(user.login.uuid) >= 0}>
+              <S.IconButtonWrapper isVisible={index === hoveredUserId || getFavoriteIdx(user.login.uuid) >= 0}>
                 <IconButton>
                   <FavoriteIcon color="error" />
                 </IconButton>
