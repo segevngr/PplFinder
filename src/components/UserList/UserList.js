@@ -17,7 +17,6 @@ const UserList = ({ users, isLoading, page, updateFavoritesList }) => {
 
   useEffect(() => {
     setUsersList(users);
-    console.log(users)
   }, [users]);
 
   useEffect(() => {
