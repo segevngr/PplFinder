@@ -7,13 +7,18 @@ import FavoriteIcon from "@material-ui/icons/Favorite";
 import * as S from "./style";
 import axios from "axios";
 import InfiniteScroll from "react-infinite-scroll-component";
+import Map from "../../components/Map/Map";
+import Modal from "react-modal";
+import Button from "../Button";
 
-const UserList = ({ users, isLoading, page, updateFavoritesList }) => {
+const UserList = ({ users, isLoading, page, removeFavoriteFromFavoritesPage }) => {
   const [usersList, setUsersList] = useState([]);
   const [hoveredUserId, setHoveredUserId] = useState();
   const [checkedCountries, setCheckedCountries] = useState(new Set());
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [favorites, setFavorites] = useState([]);
+  const [mapsIsOpen, setMapIsOpen] = useState(false);
+  const [geocode, setGeocode] = useState({ lat: 0, lng: 0 });
 
   useEffect(() => {
     setUsersList(users);
@@ -39,9 +44,31 @@ const UserList = ({ users, isLoading, page, updateFavoritesList }) => {
     setHoveredUserId();
   };
 
-  const handleClick = (user) => {
+
+  // Filter:
+  const filterUsers = () => {
+    if (!checkedCountries.size) {
+      setFilteredUsers(users);
+    }
+    else {
+      const newUsersList = users.filter(user => checkedCountries.has(user.location.country));
+      setFilteredUsers(newUsersList);
+    }
+  };
+
+  const toggleCountry = (country) => {
+    if(checkedCountries.has(country)) {
+      setCheckedCountries(prev => new Set([...prev].filter(x => x !== country)));
+    } else {
+      setCheckedCountries(prev => new Set(prev.add(country)));
+    }
+  };
+
+
+  // Favorites:
+  const handleFavoriteClick = (user) => {
     if (page === "favorites") {
-      updateFavoritesList(user.login.uuid);
+      removeFavoriteFromFavoritesPage(user.login.uuid);
     }
     const idx = getFavoriteIdx(user.login.uuid);
     if (idx < 0) {
@@ -51,25 +78,6 @@ const UserList = ({ users, isLoading, page, updateFavoritesList }) => {
     }
   };
 
-  // Filter methods:
-  const filterUsers = () => {
-    if (!checkedCountries.size) {
-      setFilteredUsers(users);
-    } else {
-      const newUsersList = users.filter(user => checkedCountries.has(user.location.country));
-      setFilteredUsers(newUsersList);
-    }
-  };
-
-  const toggleCountry = (country) => {
-    if (checkedCountries.has(country)) {
-      setCheckedCountries(prev => new Set([...prev].filter(x => x !== country)));
-    } else {
-      setCheckedCountries(prev => new Set(prev.add(country)));
-    }
-  };
-
-  // Favorites methods:
   const addToFavorites = (user) => {
     const newFavorites = favorites.slice();
     newFavorites.push(user.login.uuid);
@@ -98,16 +106,50 @@ const UserList = ({ users, isLoading, page, updateFavoritesList }) => {
     return -1;
   };
 
+  // Infinite Scroll:
+
   async function fetchNextUsers() {
     axios.get(`https://randomuser.me/api/?results=25&page=1`).then(response => {
-      const nextUsers = (response.data.results)
-      const newUsersList = usersList.concat(nextUsers)
-      setUsersList(newUsersList)
-    })
+      const nextUsers = (response.data.results);
+      const newUsersList = usersList.concat(nextUsers);
+      setUsersList(newUsersList);
+    });
   }
+
+  // Map Feature:
+  async function getGeocode(address) {
+    axios.get(`https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=AIzaSyDElEoPlJfsphpfrdRXwo0pDLu_TuUCzdI`)
+      .then(response => {
+        setGeocode(response.data.results[0].geometry.location);
+      });
+  }
+
+  const openMap = (user) => {
+    const address = user.location.street.number + " " + user?.location.street.name
+      + " " + user.location.city + " " + user.location.country;
+    getGeocode(address);
+    setMapIsOpen(true);
+  };
+
 
   return (
     <S.UserList>
+      <Modal isOpen={mapsIsOpen}
+             onRequestClose={() => setMapIsOpen(false)}
+             style={
+               {
+                 overlay: { backgroundColor: "rgba(19,19,19,0.8)" },
+                 content: {
+                   top: "50%",
+                   left: "50%",
+                   right: "auto",
+                   bottom: "auto",
+                   marginRight: "-50%",
+                   transform: "translate(-50%, -50%)"
+                 }
+               }}>
+        <Map center={geocode} zoom={16} />
+      </Modal>
       <S.Filters>
         <CheckBox value="BR" label="Brazil" onChange={toggleCountry} isChecked={checkedCountries.Brazil} />
         <CheckBox value="AU" label="Australia" onChange={toggleCountry} isChecked={checkedCountries.Australia} />
@@ -128,7 +170,6 @@ const UserList = ({ users, isLoading, page, updateFavoritesList }) => {
                 key={index}
                 onMouseEnter={() => handleMouseEnter(index)}
                 onMouseLeave={handleMouseLeave}
-                onClick={() => handleClick(user)}
               >
                 <S.UserPicture src={user?.picture.large} alt="" />
                 <S.UserInfo>
@@ -137,14 +178,16 @@ const UserList = ({ users, isLoading, page, updateFavoritesList }) => {
                   </Text>
                   <Text size="14px">{user?.email}</Text>
                   <Text size="14px">
+
                     {user?.location.street.number} {user?.location.street.name}
                   </Text>
                   <Text size="14px">
                     {user?.location.city} {user?.location.country}
                   </Text>
+                  <Button label="view on map" onClick={() => openMap(user)} />
                 </S.UserInfo>
                 <S.IconButtonWrapper isVisible={index === hoveredUserId || getFavoriteIdx(user.login.uuid) >= 0}>
-                  <IconButton>
+                  <IconButton onClick={() => handleFavoriteClick(user)}>
                     <FavoriteIcon color="error" />
                   </IconButton>
                 </S.IconButtonWrapper>
